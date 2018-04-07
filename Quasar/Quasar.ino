@@ -1,14 +1,22 @@
 #include <TeensyThreads.h>
 
-// Teensy Bluetooth test
+// DEFINES
+#define PWM1 35
+#define AIN1 9
+#define AIN2 10
 
 String data = "";
 int calThreadID = 0;
 
+// function definitions
+void setMotorDirection(int in1, int in2);
+void setMotorSpeed(int sp);
 void calThread();
+void testThread();
 String HC_Command(String cmd="");
 
 void setup() {
+  //set up bluetooth comms
   Serial.begin(9600);
   Serial4.begin(9600);
   Serial.println("Configuring HC-06 chip...");
@@ -17,6 +25,12 @@ void setup() {
   Serial.println(HC_Command("AT+NAMEquasar"));
   Serial.println(HC_Command("AT+PIN1567"));
   Serial.println("Setup complete!");
+  // set up motor control
+  pinMode(PWM1, OUTPUT);
+  pinMode(AIN1, OUTPUT);
+  pinMode(AIN2, OUTPUT);
+  setMotorDirection(HIGH,HIGH);
+  setMotorSpeed(0);
 }
 
 void loop() {
@@ -26,9 +40,11 @@ void loop() {
     Serial.println("Data: " + data);
   }
   if (data.equals("CLBR")){
-      Serial.println("Command received: CALIBRATE");
-      threads.addThread(calThread);
-      Serial.println(threads.id());
+    Serial.println("Command received: CALIBRATE");
+    threads.addThread(calThread);
+  }else if (data.equals("TEST")){
+    Serial.println("Command received: TEST");
+    threads.addThread(testThread);
   }
   data = "";
 }
@@ -47,6 +63,21 @@ String HC_Command(String cmd){
   return command;
 }
 
+void setMotorDirection(int in1, int in2){
+  digitalWrite(AIN1, in1);
+  digitalWrite(AIN2, in2);
+  Serial.print("Direction of the motor set to: ");
+  Serial.print(in1);
+  Serial.print(" ");
+  Serial.println(in2); 
+}
+
+void setMotorSpeed(int sp){
+  analogWrite(PWM1, sp);
+  Serial.print("Speed of the motor set to: ");
+  Serial.println(sp);
+}
+// THREADS
 void calThread(){
   Serial.println("Calibration thread started");
   for (int count = 0; count<10; count++){
@@ -55,5 +86,20 @@ void calThread(){
     Serial.println();
     delay(1000);
   }
+}
+
+void testThread(){
+  Serial.println("Testing thread started");
+  setMotorDirection(HIGH,LOW);
+  setMotorSpeed(255);
+  Serial.println("Going forwards at max speed");
+  delay(3000);
+  setMotorDirection(LOW,HIGH);
+  setMotorSpeed(255);
+  Serial.println("Going backwards at max speed");
+  delay(3000);
+  setMotorDirection(HIGH,HIGH);
+  setMotorSpeed(0);
+  Serial.println("Motor test complete.");
 }
 
